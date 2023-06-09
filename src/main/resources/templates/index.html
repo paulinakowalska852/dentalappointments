@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Dental Appointments</title>
+  <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        .form-container {
+            max-width: 300px;
+            margin-bottom: 20px;
+        }
+
+        .form-container input[type=text], .form-container select {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        .form-container button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 14px 20px;
+            margin: 8px 0;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .form-container button:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+<h1>Dental Appointments</h1>
+<div class="form-container">
+  <h2>Add Appointment</h2>
+  <form id="addForm">
+    <input type="text" id="name" placeholder="Name" required>
+    <input type="text" id="surname" placeholder="Surname" required>
+    <input type="date" id="date" required>
+    <input type="text" id="type" placeholder="Type" required>
+    <input type="text" id="doctor" placeholder="Doctor" required>
+    <button type="submit">Add</button>
+  </form>
+</div>
+<div class="form-container">
+  <h2>Search Appointment</h2>
+  <form id="searchForm">
+    <input type="text" id="searchId" placeholder="Appointment ID" required>
+    <button type="submit">Search</button>
+  </form>
+</div>
+<div class="form-container">
+  <h2>Edit Appointment</h2>
+  <form id="editForm">
+    <input type="text" id="editId" placeholder="Appointment ID" required>
+    <input type="text" id="editName" placeholder="Name">
+    <input type="text" id="editSurname" placeholder="Surname">
+    <input type="date" id="editDate">
+    <input type="text" id="editType" placeholder="Type">
+    <input type="text" id="editDoctor" placeholder="Doctor">
+    <button type="submit">Update</button>
+  </form>
+</div>
+<div>
+  <h2>Appointments</h2>
+  <table id="appointmentsTable">
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Surname</th>
+      <th>Date</th>
+      <th>Type</th>
+      <th>Doctor</th>
+      <th>Action</th>
+    </tr>
+    <!-- Appointments will be dynamically inserted here -->
+  </table>
+</div>
+
+<script th:inline="javascript">
+        function getAppointments() {
+            fetch('/appointments')
+                .then(response => response.json())
+                .then(appointments => {
+                    const table = document.getElementById('appointmentsTable');
+                    table.innerHTML = '<tr><th>ID</th><th>Name</th><th>Surname</th><th>Date</th><th>Type</th><th>Doctor</th><th>Action</th></tr>';
+
+                    appointments.forEach(appointment => {
+                        const row = table.insertRow();
+                        row.innerHTML = `<td>${appointment.id}</td><td>${appointment.name}</td><td>${appointment.surname}</td><td>${appointment.date}</td><td>${appointment.type}</td><td>${appointment.doctor}</td><td><button onclick="editAppointment(${appointment.id})">Edit</button> <button onclick="deleteAppointment(${appointment.id})">Delete</button></td>`;
+                    });
+                });
+        }
+
+        function addAppointment(event) {
+            event.preventDefault();
+            const form = document.getElementById('addForm');
+            const name = form.elements['name'].value;
+            const surname = form.elements['surname'].value;
+            const date = form.elements['date'].value;
+            const type = form.elements['type'].value;
+            const doctor = form.elements['doctor'].value;
+
+            const appointment = { name, surname, date, type, doctor };
+
+            fetch('/appointments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify([appointment])
+            })
+                .then(response => {
+                    if (response.ok) {
+                        form.reset();
+                        getAppointments();
+                    }
+                });
+        }
+
+        function searchAppointment(event) {
+            event.preventDefault();
+            const form = document.getElementById('searchForm');
+            const id = form.elements['searchId'].value;
+
+            fetch(`/appointments/${id}`)
+                .then(response => response.json())
+                .then(appointment => {
+                    if (appointment) {
+                        const editForm = document.getElementById('editForm');
+                        editForm.elements['editId'].value = appointment.id;
+                        editForm.elements['editName'].value = appointment.name;
+                        editForm.elements['editSurname'].value = appointment.surname;
+                        editForm.elements['editDate'].value = appointment.date;
+                        editForm.elements['editType'].value = appointment.type;
+                        editForm.elements['editDoctor'].value = appointment.doctor;
+                    } else {
+                        alert('Appointment not found.');
+                    }
+                });
+        }
+
+        function editAppointment(id) {
+            const editForm = document.getElementById('editForm');
+            const editId = editForm.elements['editId'];
+            const editName = editForm.elements['editName'];
+            const editSurname = editForm.elements['editSurname'];
+            const editDate = editForm.elements['editDate'];
+            const editType = editForm.elements['editType'];
+            const editDoctor = editForm.elements['editDoctor'];
+
+            editId.value = id;
+
+            fetch(`/appointments/${id}`)
+                .then(response => response.json())
+                .then(appointment => {
+                    if (appointment) {
+                        editName.value = appointment.name;
+                        editSurname.value = appointment.surname;
+                        editDate.value = appointment.date;
+                        editType.value = appointment.type;
+                        editDoctor.value = appointment.doctor;
+                    } else {
+                        alert('Appointment not found.');
+                    }
+                });
+        }
+
+        function updateAppointment(event) {
+            event.preventDefault();
+            const form = document.getElementById('editForm');
+            const id = form.elements['editId'].value;
+            const name = form.elements['editName'].value;
+            const surname = form.elements['editSurname'].value;
+            const date = form.elements['editDate'].value;
+            const type = form.elements['editType'].value;
+            const doctor = form.elements['editDoctor'].value;
+
+            const appointment = { id, name, surname, date, type, doctor };
+
+            fetch(`/appointments/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(appointment)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        form.reset();
+                        getAppointments();
+                    }
+                });
+        }
+
+        function deleteAppointment(id) {
+            if (confirm('Are you sure you want to delete this appointment?')) {
+                fetch(`/appointments/${id}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            getAppointments();
+                        }
+                    });
+            }
+        }
+
+        document.getElementById('addForm').addEventListener('submit', addAppointment);
+        document.getElementById('searchForm').addEventListener('submit', searchAppointment);
+        document.getElementById('editForm').addEventListener('submit', updateAppointment);
+
+        getAppointments();
+    </script>
+</body>
+</html>
